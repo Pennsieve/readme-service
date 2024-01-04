@@ -1,5 +1,5 @@
-resource "aws_iam_role" "template_service_lambda_role" {
-  name = "${var.environment_name}-${var.service_name}-template-service-lambda-role-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
+resource "aws_iam_role" "readme_service_lambda_role" {
+  name = "${var.environment_name}-${var.service_name}-lambda-role-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
 
   assume_role_policy = <<EOF
 {
@@ -18,22 +18,22 @@ resource "aws_iam_role" "template_service_lambda_role" {
 EOF
 }
 
-resource "aws_iam_role_policy_attachment" "template_service_lambda_iam_policy_attachment" {
-  role       = aws_iam_role.template_service_lambda_role.name
-  policy_arn = aws_iam_policy.template_service_lambda_iam_policy.arn
+resource "aws_iam_role_policy_attachment" "readme_service_lambda_iam_policy_attachment" {
+  role       = aws_iam_role.readme_service_lambda_role.name
+  policy_arn = aws_iam_policy.readme_service_lambda_iam_policy.arn
 }
 
-resource "aws_iam_policy" "template_service_lambda_iam_policy" {
+resource "aws_iam_policy" "readme_service_lambda_iam_policy" {
   name   = "${var.environment_name}-${var.service_name}-lambda-iam-policy-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
   path   = "/"
-  policy = data.aws_iam_policy_document.template_service_iam_policy_document.json
+  policy = data.aws_iam_policy_document.readme_service_iam_policy_document.json
 }
 
-data "aws_iam_policy_document" "template_service_iam_policy_document" {
+data "aws_iam_policy_document" "readme_service_iam_policy_document" {
 
   statement {
-    sid    = "TemplateServiceLambdaLogsPermissions"
-    effect = "Allow"
+    sid     = "ReadmeServiceLambdaLogsPermissions"
+    effect  = "Allow"
     actions = [
       "logs:CreateLogGroup",
       "logs:CreateLogStream",
@@ -45,8 +45,8 @@ data "aws_iam_policy_document" "template_service_iam_policy_document" {
   }
 
   statement {
-    sid    = "TemplateServiceLambdaEC2Permissions"
-    effect = "Allow"
+    sid     = "ReadmeServiceLambdaEC2Permissions"
+    effect  = "Allow"
     actions = [
       "ec2:CreateNetworkInterface",
       "ec2:DescribeNetworkInterfaces",

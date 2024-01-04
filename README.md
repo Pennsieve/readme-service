@@ -1,2 +1,2 @@
 # template-serverless-service
-A template for building a new Pennsieve Serverless Service
+A proxy to the readme.io API for our frontend.

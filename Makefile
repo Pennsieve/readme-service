@@ -3,9 +3,9 @@
 LAMBDA_BUCKET ?= "pennsieve-cc-lambda-functions-use1"
 WORKING_DIR   ?= "$(shell pwd)"
 API_DIR ?= "api"
-SERVICE_NAME  ?= "template-serverless-service"
-SERVICE_EXEC  ?= "template_serverless_service"
-SERVICE_PACK  ?= "templateServerlessService"
+SERVICE_NAME  ?= "readme-service"
+SERVICE_EXEC  ?= "readme_service"
+SERVICE_PACK  ?= "readmeService"
 PACKAGE_NAME  ?= "${SERVICE_NAME}-${IMAGE_TAG}.zip"
 
 .DEFAULT: help

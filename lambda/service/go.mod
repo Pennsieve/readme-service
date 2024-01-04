@@ -1,7 +1,5 @@
-module github.com/pennsieve/template-serverless-service/service
+module github.com/pennsieve/readme-service/service
 
-go 1.18
+go 1.21
 
-require (
-	github.com/aws/aws-lambda-go v1.34.1
-)
+require github.com/aws/aws-lambda-go v1.41.0

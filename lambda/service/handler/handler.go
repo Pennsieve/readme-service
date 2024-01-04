@@ -9,11 +9,11 @@ func init() {
 	log.Println("init() ")
 }
 
-func TemplateServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGatewayV2HTTPResponse, error) {
+func ReadmeServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGatewayV2HTTPResponse, error) {
 	var err error
 	var apiResponse *events.APIGatewayV2HTTPResponse
 
-	log.Println("TemplateServiceHandler() ")
+	log.Println("ReadmeServiceHandler() ")
 	apiResponse, err = handleRequest()
 
 	return apiResponse, err

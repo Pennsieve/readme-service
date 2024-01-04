@@ -1,9 +1,9 @@
 resource "aws_lambda_function" "service_lambda" {
-  description       = "Template for buillding a Lambda Function which handles requests for a new serverless Service"
-  function_name     = "${var.environment_name}-${var.service_name}-service-lambda-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
-  handler           = "publishing_service"
+  description       = "a Lambda Function which handles requests for a serverless readme.io api proxy"
+  function_name     = "${var.environment_name}-${var.service_name}-lambda-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
+  handler           = "readme_service"
   runtime           = "go1.x"
-  role              = aws_iam_role.template_service_lambda_role.arn
+  role              = aws_iam_role.readme_service_lambda_role.arn
   timeout           = 300
   memory_size       = 128
   s3_bucket         = var.lambda_bucket
