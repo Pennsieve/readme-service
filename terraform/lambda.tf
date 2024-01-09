@@ -19,7 +19,7 @@ resource "aws_lambda_function" "service_lambda" {
       ENV              = var.environment_name
       PENNSIEVE_DOMAIN = data.terraform_remote_state.account.outputs.domain_name,
       REGION           = var.aws_region
-      README_API_KEY   = aws_ssm_parameter.readme_api_key
+      README_API_KEY   = aws_ssm_parameter.readme_api_key.value
     }
   }
 }
