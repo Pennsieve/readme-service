@@ -16,6 +16,11 @@ func ReadmeServiceHandler(ctx context.Context, request events.APIGatewayV2HTTPRe
 	if errorResp != nil {
 		return errorResp, nil
 	}
+	logger.Info("request parameters",
+		"routeKey", request.RouteKey,
+		"pathParameters", request.PathParameters,
+		"rawPath", request.RawPath,
+		"requestContext.routeKey", request.RequestContext.RouteKey)
 	path := request.RequestContext.HTTP.Path
 	switch path {
 	case "/readme/docs":
