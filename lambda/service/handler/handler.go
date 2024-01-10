@@ -8,6 +8,8 @@ import (
 	"os"
 )
 
+const applicationJson = "application/json"
+
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 func ReadmeServiceHandler(ctx context.Context, request events.APIGatewayV2HTTPRequest) (*events.APIGatewayV2HTTPResponse, error) {
@@ -44,7 +46,7 @@ func handleRequest(ctx context.Context, request events.APIGatewayV2HTTPRequest, 
 	}
 	logger = logger.With("slug", slug)
 	readmeResponse := GetDocument(ctx, apiKey, slug)
-	return &events.APIGatewayV2HTTPResponse{Body: readmeResponse.Body, StatusCode: readmeResponse.Status}, nil
+	return readmeResponse.AsAPIGatewayV2HTTPResponse(), nil
 
 }
 
@@ -59,4 +61,10 @@ func readmeApiKey() (string, *events.APIGatewayV2HTTPResponse) {
 	} else {
 		return apiKey, nil
 	}
+}
+
+func response(body string, statusCode int) *events.APIGatewayV2HTTPResponse {
+	resp := events.APIGatewayV2HTTPResponse{Body: body, StatusCode: statusCode}
+	resp.Headers[http.CanonicalHeaderKey("content-type")] = applicationJson
+	return &resp
 }

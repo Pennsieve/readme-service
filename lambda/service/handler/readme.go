@@ -15,7 +15,7 @@ type ReadmeResponse struct {
 }
 
 func (r *ReadmeResponse) AsAPIGatewayV2HTTPResponse() *events.APIGatewayV2HTTPResponse {
-	return &events.APIGatewayV2HTTPResponse{Body: r.Body, StatusCode: r.Status}
+	return response(r.Body, r.Status)
 }
 
 func NewReadmeErrorResponse(status int, format string, args ...any) *ReadmeResponse {
@@ -36,7 +36,7 @@ func GetDocument(ctx context.Context, apiKey string, slug string) *ReadmeRespons
 	if err != nil {
 		return NewReadmeErrorResponse(http.StatusInternalServerError, "error creating request to %s: %v", url, err)
 	}
-	req.Header.Set("accept", "application/json")
+	req.Header.Set("accept", applicationJson)
 	req.SetBasicAuth(apiKey, "")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
