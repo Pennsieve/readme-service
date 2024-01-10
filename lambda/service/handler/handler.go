@@ -64,7 +64,7 @@ func readmeApiKey() (string, *events.APIGatewayV2HTTPResponse) {
 }
 
 func response(body string, statusCode int) *events.APIGatewayV2HTTPResponse {
-	resp := events.APIGatewayV2HTTPResponse{Body: body, StatusCode: statusCode}
+	resp := events.APIGatewayV2HTTPResponse{Body: body, StatusCode: statusCode, Headers: map[string]string{}}
 	resp.Headers[http.CanonicalHeaderKey("content-type")] = applicationJson
 	return &resp
 }
