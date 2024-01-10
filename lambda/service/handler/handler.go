@@ -54,6 +54,8 @@ func readmeApiKey() (string, *events.APIGatewayV2HTTPResponse) {
 		return "", NewReadmeErrorResponse(http.StatusInternalServerError, "environment variable %s is not set", envKey).AsAPIGatewayV2HTTPResponse()
 	} else if len(apiKey) == 0 {
 		return "", NewReadmeErrorResponse(http.StatusInternalServerError, "environment variable %s is empty", envKey).AsAPIGatewayV2HTTPResponse()
+	} else if apiKey == "dummy" {
+		return "", NewReadmeErrorResponse(http.StatusInternalServerError, "environment variable %s is still set to it's initial temporary value", envKey).AsAPIGatewayV2HTTPResponse()
 	} else {
 		return apiKey, nil
 	}
