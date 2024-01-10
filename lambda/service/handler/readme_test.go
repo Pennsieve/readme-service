@@ -41,3 +41,17 @@ func TestGetDocument(t *testing.T) {
 	assert.Equal(t, expectedResponseBody, resp.Body)
 	assert.Equal(t, expectedStatus, resp.Status)
 }
+
+func TestDocumentPathRegex(t *testing.T) {
+	for path, match := range map[string]bool{
+		"/readme/docs/doc-page":                 true,
+		"/something/else":                       false,
+		"/readme/docs/":                         true,
+		"/readme/docs/doc-slug/some-more-stuff": false,
+		"/readme/docs":                          false,
+	} {
+		t.Run(path, func(t *testing.T) {
+			assert.Equal(t, match, documentPathRegex.MatchString(path))
+		})
+	}
+}

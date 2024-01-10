@@ -16,16 +16,16 @@ func ReadmeServiceHandler(ctx context.Context, request events.APIGatewayV2HTTPRe
 	if errorResp != nil {
 		return errorResp, nil
 	}
-	logger.Info("request parameters",
+	logger.Debug("request parameters",
 		"routeKey", request.RouteKey,
 		"pathParameters", request.PathParameters,
 		"rawPath", request.RawPath,
-		"requestContext.routeKey", request.RequestContext.RouteKey)
+		"requestContext.routeKey", request.RequestContext.RouteKey,
+		"requestContext.http.path", request.RequestContext.HTTP.Path)
 	path := request.RequestContext.HTTP.Path
-	switch path {
-	case "/readme/docs":
+	if documentPathRegex.MatchString(path) {
 		return handleRequest(ctx, request, apiKey)
-	default:
+	} else {
 		return NewReadmeErrorResponse(http.StatusNotFound, "resource not found: %s", path).AsAPIGatewayV2HTTPResponse(), nil
 	}
 }

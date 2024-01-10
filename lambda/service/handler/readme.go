@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"io"
 	"net/http"
+	"regexp"
 )
 
 type ReadmeResponse struct {
@@ -27,6 +28,7 @@ func NewReadmeErrorResponse(status int, format string, args ...any) *ReadmeRespo
 }
 
 var readmeDocsUrl = "https://dash.readme.com/api/v1/docs"
+var documentPathRegex = regexp.MustCompile(`^/readme/docs/[^/]*$`)
 
 func GetDocument(ctx context.Context, apiKey string, slug string) *ReadmeResponse {
 	url := fmt.Sprintf("%s/%s", readmeDocsUrl, slug)
