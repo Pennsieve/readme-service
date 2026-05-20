@@ -1,0 +1,167 @@
+#file: noinspection MaybeTerraformTemplateInspection
+openapi: 3.0.1
+info:
+  version: "1.0"
+  title: Readme Service
+  description: |
+    The Readme Service proxies Pennsieve documentation hosted on readme.io. It
+    fronts the readme.io v1 and v2 APIs with a Pennsieve-managed API key so
+    callers (the web app, the LLM-assistant tools in pennsieve-mcp) don't
+    need to mint or rotate readme.io credentials.
+
+    Auth: Pennsieve JWT (token_auth) — same authorizer used by every other
+    api2.pennsieve.{net,io} service.
+
+    Two endpoints:
+
+      GET /docs/{slug}    — fetch one guide by URL-safe slug
+      GET /search         — text search across guides (excludes API reference)
+
+  termsOfService: https://docs.pennsieve.io/page/pennsieve-terms-of-use
+  contact:
+    name: Pennsieve Support
+    email: support@pennsieve.net
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: https://api2.pennsieve.io/readme
+    description: Production server
+  - url: https://api2.pennsieve.net/readme
+    description: Development server
+externalDocs:
+  description: Find more info here
+  url: https://docs.pennsieve.io
+tags:
+  - name: Readme Service
+    description: Pennsieve documentation lookup
+    externalDocs:
+      url: https://docs.pennsieve.io/reference
+
+paths:
+  /docs/{slug}:
+    get:
+      summary: Get Pennsieve readme.io doc by slug
+      description: |
+        Gets a Pennsieve readme.io doc by its URL-safe slug. Slugs are all
+        lowercase with hyphens (e.g. `uploading-data`).
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/readme-service'
+      operationId: getReadmeDoc
+      security:
+        - token_auth: [ ]
+      tags:
+        - Readme Service
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+          description: The URL-safe slug of the readme.io doc. Slugs must be all lowercase with hyphens.
+      responses:
+        '200':
+          description: The requested document
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '4XX':
+          $ref: '#/components/responses/Unauthorized'
+        '5XX':
+          $ref: '#/components/responses/Error'
+
+  /search:
+    get:
+      summary: Search Pennsieve readme.io guides
+      description: |
+        Full-text search across Pennsieve's published guides. API reference
+        content is excluded server-side via the `section=guides` filter — only
+        narrative documentation is searched.
+
+        Use this when the user is asking "how do I…" / "what does X mean in
+        Pennsieve?" questions answerable from documentation rather than from
+        their workspace data.
+      x-amazon-apigateway-integration:
+        $ref: '#/components/x-amazon-apigateway-integrations/readme-service'
+      operationId: searchReadmeGuides
+      security:
+        - token_auth: [ ]
+      tags:
+        - Readme Service
+      parameters:
+        - in: query
+          name: query
+          required: true
+          schema:
+            type: string
+          description: Keyword search across guide title, body, and category names.
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 25
+            default: 5
+          description: Max guides returned. Defaults to 5.
+      responses:
+        '200':
+          description: Matching guides (raw readme.io v2 search response)
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '4XX':
+          $ref: '#/components/responses/Unauthorized'
+        '5XX':
+          $ref: '#/components/responses/Error'
+
+components:
+  x-amazon-apigateway-integrations:
+    readme-service:
+      type: aws_proxy
+      uri: ${readme_service_lambda_arn}
+      httpMethod: POST
+      passthroughBehavior: when_no_match
+      contentHandling: CONVERT_TO_TEXT
+      payloadFormatVersion: 2.0
+  securitySchemes:
+    token_auth:
+      type: "apiKey"
+      name: "Unused"
+      in: "header"
+      x-amazon-apigateway-authorizer:
+        identitySource: "$request.header.Authorization"
+        authorizerUri: ${authorize_lambda_invoke_uri}
+        authorizerPayloadFormatVersion: "2.0"
+        authorizerResultTtlInSeconds: 300
+        type: "request"
+        enableSimpleResponses: true
+        authorizerCredentials: ${gateway_authorizer_role}
+
+  responses:
+    Unauthorized:
+      description: Incorrect authentication or user has incorrect permissions.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+              errorId:
+                type: string
+    Error:
+      description: Server Error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+              errorId:
+                type: string
