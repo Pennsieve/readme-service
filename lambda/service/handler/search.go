@@ -105,16 +105,31 @@ type normalizedResponse struct {
 // v1 implementation — used today against the legacy Pennsieve project.
 // ──────────────────────────────────────────────────────────────────────
 
+// v1SearchEnvelope is the top-level shape of readme.io's v1 search
+// response. The actual hits live inside `results` — it's NOT a bare
+// array as the legacy docs imply.
+type v1SearchEnvelope struct {
+	Results []v1SearchHit `json:"results"`
+}
+
 // v1SearchHit is the (loosely-typed) projection of one v1 search result.
 // Fields are best-effort: readme.io has evolved its v1 response over the
 // years and a few fields can be absent. We decode what we use and treat
 // missing fields as empty.
+//
+// Guide vs reference is determined by the `isReference` boolean (NOT a
+// `type` field as the legacy docs suggest). `excerpt` lives nested
+// inside `_snippetResult.excerpt.value`, not at the top level.
 type v1SearchHit struct {
-	Title    string `json:"title"`
-	Slug     string `json:"slug"`
-	Excerpt  string `json:"excerpt,omitempty"`
-	Type     string `json:"type,omitempty"`     // "guide" or "reference" (legacy ReadMe)
-	Category string `json:"category,omitempty"` // category slug
+	Title         string `json:"title"`
+	Slug          string `json:"slug"`
+	IsReference   bool   `json:"isReference"`
+	InternalLink  string `json:"internalLink,omitempty"` // e.g. "docs/getting-started" or "reference/upload"
+	SnippetResult struct {
+		Excerpt struct {
+			Value string `json:"value"`
+		} `json:"excerpt"`
+	} `json:"_snippetResult"`
 }
 
 func searchGuidesV1(ctx context.Context, apiKey, query string, limit int) *ReadmeResponse {
@@ -151,26 +166,23 @@ func searchGuidesV1(ctx context.Context, apiKey, query string, limit int) *Readm
 	}
 
 	// 200: decode, filter, normalize.
-	var hits []v1SearchHit
-	if err := json.Unmarshal(respBytes, &hits); err != nil {
+	var env v1SearchEnvelope
+	if err := json.Unmarshal(respBytes, &env); err != nil {
 		return NewReadmeErrorResponse(http.StatusInternalServerError, "decoding v1 search response: %v", err)
 	}
 
 	out := normalizedResponse{Version: searchAPIVersionV1, Data: []normalizedHit{}}
-	for _, h := range hits {
-		// Filter out API reference content — keep only guides. readme.io
-		// v1 marks reference docs with `type=reference`. Empty `type` is
-		// treated as a guide (defensive default — better to over-include
-		// in search than miss legitimate guide content).
-		if strings.EqualFold(h.Type, "reference") {
+	for _, h := range env.Results {
+		// Filter out API reference content — keep only guides.
+		// readme.io v1 marks reference docs via `isReference: true`.
+		if h.IsReference {
 			continue
 		}
 		out.Data = append(out.Data, normalizedHit{
-			Title:    h.Title,
-			Slug:     h.Slug,
-			Excerpt:  h.Excerpt,
-			Category: h.Category,
-			URL:      docsPublicUrlPrefix + h.Slug,
+			Title:   h.Title,
+			Slug:    h.Slug,
+			Excerpt: h.SnippetResult.Excerpt.Value,
+			URL:     docsPublicUrlPrefix + h.Slug,
 		})
 		if len(out.Data) >= limit {
 			break

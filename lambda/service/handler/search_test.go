@@ -17,15 +17,25 @@ import (
 // v1 search — the default path against legacy ReadMe (Pennsieve today).
 // ─────────────────────────────────────────────────────────────────────
 
+// buildV1Hit assembles a v1SearchHit fixture in the actual readme.io
+// shape — isReference bool + excerpt nested inside _snippetResult.
+func buildV1Hit(title, slug, excerpt string, isReference bool) v1SearchHit {
+	h := v1SearchHit{Title: title, Slug: slug, IsReference: isReference}
+	h.SnippetResult.Excerpt.Value = excerpt
+	return h
+}
+
 func TestSearchGuides_V1_DefaultsAndFiltersReferenceHits(t *testing.T) {
 	// Fake readme.io v1 search endpoint. Verifies our request shape and
 	// returns a mixed list of guide + reference hits to confirm
-	// client-side filtering.
-	v1Hits := []v1SearchHit{
-		{Title: "Uploading data", Slug: "uploading-data", Excerpt: "How to upload files", Type: "guide", Category: "getting-started"},
-		{Title: "POST /upload (API)", Slug: "post-upload", Excerpt: "API endpoint", Type: "reference", Category: "api-reference"},
-		{Title: "Bulk upload", Slug: "bulk-upload", Excerpt: "Large dataset uploads", Type: "guide", Category: "tutorials"},
-		{Title: "Mystery hit (no type)", Slug: "mystery", Excerpt: "Unknown classification", Type: "", Category: "uncategorized"},
+	// client-side filtering on isReference.
+	envelope := v1SearchEnvelope{
+		Results: []v1SearchHit{
+			buildV1Hit("Uploading data", "uploading-data", "How to upload files", false),
+			buildV1Hit("POST /upload (API)", "post-upload", "API endpoint", true),
+			buildV1Hit("Bulk upload", "bulk-upload", "Large dataset uploads", false),
+			buildV1Hit("Pennsieve agent", "installing-the-pennsieve-agent", "CLI tool for uploads", false),
+		},
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +47,7 @@ func TestSearchGuides_V1_DefaultsAndFiltersReferenceHits(t *testing.T) {
 		assert.Equal(t, "test-key", user)
 		assert.Empty(t, pass)
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(v1Hits)
+		_ = json.NewEncoder(w).Encode(envelope)
 	}))
 	defer srv.Close()
 	defer func(u string) { readmeSearchUrlV1 = u }(readmeSearchUrlV1)
@@ -54,12 +64,14 @@ func TestSearchGuides_V1_DefaultsAndFiltersReferenceHits(t *testing.T) {
 
 	assert.Equal(t, searchAPIVersionV1, got.Version)
 	assert.Equal(t, 3, got.Returned)
-	// Reference hit was filtered, guide + bulk + mystery (empty-type default-include) remain
+	// isReference=true was filtered; the three guide hits remain
 	assert.Len(t, got.Data, 3)
 	for _, hit := range got.Data {
 		assert.NotEqual(t, "post-upload", hit.Slug, "API reference hit leaked into results")
 		assert.Equal(t, docsPublicUrlPrefix+hit.Slug, hit.URL)
 	}
+	// Excerpt comes through from _snippetResult.excerpt.value
+	assert.Equal(t, "How to upload files", got.Data[0].Excerpt)
 }
 
 func TestSearchGuides_V1_PropagatesReadmeError(t *testing.T) {
@@ -78,14 +90,14 @@ func TestSearchGuides_V1_PropagatesReadmeError(t *testing.T) {
 }
 
 func TestSearchGuides_V1_RespectsLimit(t *testing.T) {
-	v1Hits := []v1SearchHit{
-		{Title: "A", Slug: "a", Type: "guide"},
-		{Title: "B", Slug: "b", Type: "guide"},
-		{Title: "C", Slug: "c", Type: "guide"},
-	}
+	envelope := v1SearchEnvelope{Results: []v1SearchHit{
+		buildV1Hit("A", "a", "", false),
+		buildV1Hit("B", "b", "", false),
+		buildV1Hit("C", "c", "", false),
+	}}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(v1Hits)
+		_ = json.NewEncoder(w).Encode(envelope)
 	}))
 	defer srv.Close()
 	defer func(u string) { readmeSearchUrlV1 = u }(readmeSearchUrlV1)
@@ -151,6 +163,25 @@ func TestSearchGuides_DefaultsToV1WhenEnvUnknown(t *testing.T) {
 	t.Setenv(searchAPIVersionEnvVar, "v3-beta")
 	_ = SearchGuides(context.Background(), "test-key", "q", 5)
 	assert.True(t, hit, "v1 endpoint should have been called for unknown env value")
+}
+
+func TestSearchGuides_V1_HandlesEmptyResults(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprint(w, `{"results":[]}`)
+	}))
+	defer srv.Close()
+	defer func(u string) { readmeSearchUrlV1 = u }(readmeSearchUrlV1)
+	readmeSearchUrlV1 = srv.URL
+
+	t.Setenv(searchAPIVersionEnvVar, "")
+	resp := SearchGuides(context.Background(), "test-key", "nomatch", 5)
+	require.Equal(t, http.StatusOK, resp.Status)
+
+	var got normalizedResponse
+	require.NoError(t, json.Unmarshal([]byte(resp.Body), &got))
+	assert.Equal(t, 0, got.Returned)
+	assert.Equal(t, searchAPIVersionV1, got.Version)
 }
 
 // Ensure tests don't leak env state into the rest of the suite.
