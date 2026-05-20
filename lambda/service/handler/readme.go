@@ -28,7 +28,22 @@ func NewReadmeErrorResponse(status int, format string, args ...any) *ReadmeRespo
 }
 
 var readmeDocsUrl = "https://dash.readme.com/api/v1/docs"
-var documentPathRegex = regexp.MustCompile(`^/readme/docs/[^/]*$`)
+
+// documentPathRegex tolerates two forms during the gateway migration:
+//
+//   /docs/{slug}            — the form arriving via the dedicated readme-service
+//                             gateway (api_mapping_key strips the /readme prefix
+//                             before forwarding; see terraform/gateway.tf)
+//   /readme/docs/{slug}     — the legacy form arriving via pennsieve-go-api's
+//                             monolithic gateway, which doesn't strip prefixes
+//
+// Both deploy paths can run concurrently. Once pennsieve-go-api removes its
+// readme-service integration, the second form goes away and this regex can
+// drop the optional `^/readme` group.
+var documentPathRegex = regexp.MustCompile(`^(?:/readme)?/docs/[^/]*$`)
+
+// searchPathRegex mirrors documentPathRegex's dual-form handling.
+var searchPathRegex = regexp.MustCompile(`^(?:/readme)?/search$`)
 
 func GetDocument(ctx context.Context, apiKey string, slug string) *ReadmeResponse {
 	url := fmt.Sprintf("%s/%s", readmeDocsUrl, slug)

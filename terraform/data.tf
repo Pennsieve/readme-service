@@ -47,3 +47,17 @@ data "terraform_remote_state" "platform_infrastructure" {
     profile = var.aws_account
   }
 }
+
+# Import API Gateway state — we read the shared authorizer Lambda URI and
+# invocation role from pennsieve-go-api's terraform outputs. Same pattern
+# packages-service uses.
+data "terraform_remote_state" "api_gateway" {
+  backend = "s3"
+
+  config = {
+    bucket  = "${var.aws_account}-terraform-state"
+    key     = "aws/${data.aws_region.current_region.name}/${var.vpc_name}/${var.environment_name}/pennsieve-go-api/terraform.tfstate"
+    region  = "us-east-1"
+    profile = var.aws_account
+  }
+}
