@@ -77,8 +77,19 @@ paths:
       summary: Search Pennsieve readme.io guides
       description: |
         Full-text search across Pennsieve's published guides. API reference
-        content is excluded server-side via the `section=guides` filter — only
-        narrative documentation is searched.
+        content is excluded from results — only narrative documentation is
+        searched.
+
+        Backed by readme.io v1 today (POST /api/v1/docs/search with
+        client-side filter for type=guide) because Pennsieve's readme.io
+        project is on the legacy platform, not "ReadMe Refactored".
+        readme.io v2's server-side `section=guides` filter requires the
+        Refactored platform and returns empty for legacy projects.
+
+        When Pennsieve migrates to Refactored, flip
+        README_SEARCH_API_VERSION=v2 on the Lambda env to use v2 search
+        natively — no code change required. Response shape is normalized
+        across both implementations.
 
         Use this when the user is asking "how do I…" / "what does X mean in
         Pennsieve?" questions answerable from documentation rather than from
