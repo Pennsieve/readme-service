@@ -1,8 +1,9 @@
 resource "aws_lambda_function" "service_lambda" {
   description   = "a Lambda Function which handles requests for a serverless readme.io api proxy"
   function_name = "${var.environment_name}-${var.service_name}-lambda-${data.terraform_remote_state.region.outputs.aws_region_shortname}"
-  handler       = "readme_service"
-  runtime       = "go1.x"
+  handler       = "bootstrap"
+  runtime       = "provided.al2023"
+  architectures = ["arm64"]
   role          = aws_iam_role.readme_service_lambda_role.arn
   timeout       = 300
   memory_size   = 128
